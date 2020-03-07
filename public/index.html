@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>huangxf-blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="大数据交流、flinkßß">
+<meta property="og:type" content="website">
+<meta property="og:title" content="huangxf-blog">
+<meta property="og:url" content="http://yoursite.com/index.html">
+<meta property="og:site_name" content="huangxf-blog">
+<meta property="og:description" content="大数据交流、flinkßß">
+<meta property="og:locale" content="en_US">
+<meta property="article:author" content="huang Xiaofeng">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="huangxf-blog" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">huangxf-blog</a>
+      </h1>
+      
+        <h2 id="subtitle-wrap">
+          <a href="/" id="subtitle">大数据学习</a>
+        </h2>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main">
+  
+    <article id="post-运行中容器增加端口" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/03/07/%E8%BF%90%E8%A1%8C%E4%B8%AD%E5%AE%B9%E5%99%A8%E5%A2%9E%E5%8A%A0%E7%AB%AF%E5%8F%A3/" class="article-date">
+  <time datetime="2020-03-07T02:28:14.000Z" itemprop="datePublished">2020-03-07</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/03/07/%E8%BF%90%E8%A1%8C%E4%B8%AD%E5%AE%B9%E5%99%A8%E5%A2%9E%E5%8A%A0%E7%AB%AF%E5%8F%A3/">运行中容器增加端口</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>方法1 修改iptables端口映射<br>docker的端口映射并不是在docker技术中实现的，而是通过宿主机的iptables来实现。通过控制网桥来做端口映射，类似路由器中设置路由端口映射。<br>比如我们有一个容器的80端口映射到主机的8080端口，先查看iptables到底设置了什么规则：</p>
+<p>sudo iptables -t nat -vnL<br>在结果中有一条：</p>
+<p>Chain DOCKER<br>target     prot opt source               destination<br>RETURN     all  –  0.0.0.0/0            0.0.0.0/0<br>DNAT       tcp  –  0.0.0.0/0            0.0.0.0/0            tcp dpt:8080 to:172.17.0.3:80<br>我们可以看到docker创建了一个名为DOKCER的自定义的链条Chain。而我开放80端口的容器的ip是172.17.0.3</p>
+<p>也可以通过inspect命令查看容器ip:</p>
+<p>docker inspect containerId |grep IPAddress<br>我们想再增加一个端口映射，比如8081-&gt;81，就在这个链条是再加一条规则：</p>
+<p>sudo iptables -t nat -A  DOCKER -p tcp –dport 8081 -j DNAT –to-destination 172.17.0.3:81<br>如果加错了或者想修改：</p>
+<p>先显示行号查看</p>
+<p>sudo iptables -t nat -vnL DOCKER –line-number<br>删除规则3</p>
+<p>sudo iptables -t nat -D DOCKER 3<br>方法2 修改容器配置文件<br>容器的配置文件/var/lib/docker/containers/[containerId]目录下，hostconfig.json和config.v2.json 修改好之后，重启容器服务。</p>
+<p>方法3 把运行中的容器生成新的镜像，然后运行新的镜像<br>提交一个运行中的容器为镜像<br>docker commit containerid heropoo/example<br>2.运行heropoo/example镜像并添加8080映射容器80端口</p>
+<p>docker run -d -p 8000:80  heropoo/example /bin/sh<br>试试吧~😎</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2020/03/07/%E8%BF%90%E8%A1%8C%E4%B8%AD%E5%AE%B9%E5%99%A8%E5%A2%9E%E5%8A%A0%E7%AB%AF%E5%8F%A3/" data-id="ck7h3kh240001890banphbirp" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-docker创建hadoop环境记录" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/03/06/docker%E5%88%9B%E5%BB%BAhadoop%E7%8E%AF%E5%A2%83%E8%AE%B0%E5%BD%95/" class="article-date">
+  <time datetime="2020-03-06T10:20:09.000Z" itemprop="datePublished">2020-03-06</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/03/06/docker%E5%88%9B%E5%BB%BAhadoop%E7%8E%AF%E5%A2%83%E8%AE%B0%E5%BD%95/">docker创建hadoop环境记录</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>##dockerfile</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">#生成的新镜像以centos镜像为基础</span><br><span class="line">FROM centos</span><br><span class="line">MAINTAINER by kongtrio(kongtrio@sina.com)</span><br><span class="line">#升级系统</span><br><span class="line">RUN yum -y update</span><br><span class="line">#安装openssh-server、client</span><br><span class="line">RUN yum -y install openssh-server openssh-clients.x86_64 vim less wget</span><br><span class="line">#修改&#x2F;etc&#x2F;ssh&#x2F;sshd_config</span><br><span class="line">#RUN sed -i &#39;s&#x2F;UsePAM yes&#x2F;UsePAM no&#x2F;g&#39; &#x2F;etc&#x2F;ssh&#x2F;sshd_config</span><br><span class="line"></span><br><span class="line">#将密钥文件复制到&#x2F;etc&#x2F;ssh&#x2F;目录中。这里要用root的权限生成key</span><br><span class="line">RUN mkdir -p &#x2F;root&#x2F;.ssh</span><br><span class="line">#生成秘钥、公钥</span><br><span class="line">RUN ssh-keygen -t rsa -b 2048 -P &#39;&#39; -f &#x2F;root&#x2F;.ssh&#x2F;id_rsa</span><br><span class="line">RUN cat &#x2F;root&#x2F;.ssh&#x2F;id_rsa.pub &gt; &#x2F;root&#x2F;.ssh&#x2F;authorized_keys</span><br><span class="line">RUN cp &#x2F;root&#x2F;.ssh&#x2F;id_rsa &#x2F;etc&#x2F;ssh&#x2F;ssh_host_rsa_key</span><br><span class="line">RUN cp &#x2F;root&#x2F;.ssh&#x2F;id_rsa.pub &#x2F;etc&#x2F;ssh&#x2F;ssh_host_rsa_key.pub</span><br><span class="line"></span><br><span class="line"># 安装 jre 1.8</span><br><span class="line">RUN yum -y install java-1.8.0-openjdk.x86_64</span><br><span class="line">ENV JAVA_HOME&#x3D;&#x2F;etc&#x2F;alternatives&#x2F;jre_1.8.0</span><br><span class="line"></span><br><span class="line">#定义时区参数</span><br><span class="line">ENV TZ&#x3D;Asia&#x2F;Shanghai</span><br><span class="line">#设置时区</span><br><span class="line">RUN ln -snf &#x2F;usr&#x2F;share&#x2F;zoneinfo&#x2F;$TZ &#x2F;etc&#x2F;localtime &amp;&amp; echo &#39;$TZ&#39; &gt; &#x2F;etc&#x2F;timezone</span><br><span class="line"></span><br><span class="line">#将ssh服务启动脚本复制到&#x2F;usr&#x2F;local&#x2F;sbin目录中，并改变权限为755</span><br><span class="line">ADD run.sh &#x2F;usr&#x2F;local&#x2F;sbin&#x2F;run.sh</span><br><span class="line">RUN chmod 755 &#x2F;usr&#x2F;local&#x2F;sbin&#x2F;run.sh</span><br><span class="line"></span><br><span class="line">#变更root密码为root</span><br><span class="line">RUN echo &quot;root:root&quot;| chpasswd</span><br><span class="line">#开放窗口的22端口</span><br><span class="line">EXPOSE 22</span><br><span class="line">#运行脚本，启动sshd服务</span><br><span class="line">CMD [&quot;&#x2F;usr&#x2F;local&#x2F;sbin&#x2F;run.sh&quot;]</span><br></pre></td></tr></table></figure>
+<p>##创建我的镜像<br>docker build -t my_centos:v1 .<br>##添加国内源。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http:&#x2F;&#x2F;hub-mirror.c.163.com</span><br></pre></td></tr></table></figure>
+<p><a href="http://hub-mirror.c.163.com" target="_blank" rel="noopener">http://hub-mirror.c.163.com</a></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim run.sh</span><br></pre></td></tr></table></figure>
+<p>输入以下内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#!&#x2F;bin&#x2F;bash</span><br><span class="line">&#x2F;usr&#x2F;sbin&#x2F;sshd -D</span><br></pre></td></tr></table></figure>
+<p>通过镜像启动容器：<br>docker run -d -P –name hadoop_centos my_centos:v1 /usr/local/sbin/run.sh</p>
+<p>进入容器中：<br>docker exec -it hadoop_centos /bin/bash</p>
+<p>启动容器后，我们就可以进入容器进行hadoop和hive的相关安装了。</p>
+<p>修改hadoop-env.sh中<br>export JAVA_HOME=”/etc/alternatives/jre_1.8.0”</p>
+<p>指定hadoop环境变量：<br>/usr/local/hadoop-2.10.0</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 在文本最后加上</span><br><span class="line">export HADOOP_HOME&#x3D;&quot;&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&quot;</span><br><span class="line">export PATH&#x3D;$PATH:$HADOOP_HOME&#x2F;bin:$HADOOP_HOME&#x2F;sbin</span><br></pre></td></tr></table></figure>
+<p>生效环境变量：<br>source /etc/profile</p>
+<p>namenode 初始化：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hadoop namenode -format</span><br></pre></td></tr></table></figure>
+<p>会出现以下文字：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;************************************************************</span><br><span class="line">STARTUP_MSG: Starting NameNode</span><br><span class="line">STARTUP_MSG:   host &#x3D; da3aab8614a2&#x2F;172.17.0.2</span><br><span class="line">STARTUP_MSG:   args &#x3D; [-format]</span><br><span class="line">STARTUP_MSG:   version &#x3D; 2.10.0</span><br><span class="line">STARTUP_MSG:   classpath &#x3D; &#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;etc&#x2F;hadoop:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;java-xmlbuilder-0.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;slf4j-log4j12-1.7.25.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jackson-xc-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;junit-4.11.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;stax-api-1.0-2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jetty-sslengine-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-compress-1.19.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;stax2-api-3.1.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;api-util-1.0.0-M20.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;nimbus-jose-jwt-4.41.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;snappy-java-1.0.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;json-smart-1.3.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;httpcore-4.4.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-collections-3.2.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jets3t-0.9.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jaxb-impl-2.2.3-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jsp-api-2.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;netty-3.10.6.Final.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jsch-0.1.54.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jackson-core-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;paranamer-2.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-beanutils-1.9.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jsr305-3.0.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jaxb-api-2.2.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;curator-recipes-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-math3-3.1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;htrace-core4-4.1.0-incubating.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-logging-1.1.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-configuration-1.6.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jetty-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;httpclient-4.5.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jersey-json-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jetty-util-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;log4j-1.2.17.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;servlet-api-2.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;protobuf-java-2.5.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;hadoop-auth-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;guava-11.0.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;xmlenc-0.52.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-codec-1.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;activation-1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jcip-annotations-1.0-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;zookeeper-3.4.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-cli-1.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;avro-1.7.7.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;gson-2.2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;curator-client-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;curator-framework-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jackson-jaxrs-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-lang3-3.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jersey-core-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;apacheds-i18n-2.0.0-M15.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;woodstox-core-5.0.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;mockito-all-1.8.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;api-asn1-api-1.0.0-M20.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-io-2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;slf4j-api-1.7.25.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-lang-2.6.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jackson-mapper-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;hamcrest-core-1.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-digester-1.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;commons-net-3.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;apacheds-kerberos-codec-2.0.0-M15.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jettison-1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;asm-3.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;hadoop-annotations-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;lib&#x2F;jersey-server-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;hadoop-common-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;hadoop-nfs-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;common&#x2F;hadoop-common-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;xml-apis-1.4.01.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;netty-3.10.6.Final.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jackson-databind-2.7.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jackson-core-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jackson-core-2.7.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jsr305-3.0.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;htrace-core4-4.1.0-incubating.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-logging-1.1.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;leveldbjni-all-1.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jetty-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jackson-annotations-2.7.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jetty-util-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;log4j-1.2.17.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;servlet-api-2.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;protobuf-java-2.5.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;guava-11.0.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;xmlenc-0.52.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-codec-1.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;hadoop-hdfs-client-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;netty-all-4.0.23.Final.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-cli-1.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jersey-core-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;okio-1.6.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-io-2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-lang-2.6.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;commons-daemon-1.0.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jackson-mapper-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;okhttp-2.7.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;xercesImpl-2.12.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;asm-3.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;lib&#x2F;jersey-server-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-rbf-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-native-client-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-nfs-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-client-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-client-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-rbf-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;hdfs&#x2F;hadoop-hdfs-native-client-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;java-xmlbuilder-0.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jackson-xc-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;stax-api-1.0-2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jetty-sslengine-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-compress-1.19.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;stax2-api-3.1.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;geronimo-jcache_1.0_spec-1.0-alpha-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;api-util-1.0.0-M20.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;nimbus-jose-jwt-4.41.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;snappy-java-1.0.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;json-smart-1.3.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;httpcore-4.4.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-collections-3.2.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jets3t-0.9.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jaxb-impl-2.2.3-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jsp-api-2.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;guice-servlet-3.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;netty-3.10.6.Final.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;ehcache-3.3.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jsch-0.1.54.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jackson-core-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;paranamer-2.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-beanutils-1.9.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;aopalliance-1.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jsr305-3.0.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;fst-2.50.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;HikariCP-java7-2.4.12.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;mssql-jdbc-6.2.1.jre7.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jaxb-api-2.2.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;curator-recipes-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-math3-3.1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;htrace-core4-4.1.0-incubating.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-logging-1.1.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-configuration-1.6.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;leveldbjni-all-1.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jetty-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;httpclient-4.5.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jersey-json-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jetty-util-6.1.26.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;json-io-2.5.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;guice-3.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;log4j-1.2.17.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jersey-client-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;servlet-api-2.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;protobuf-java-2.5.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;java-util-1.9.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;guava-11.0.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;xmlenc-0.52.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-codec-1.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;activation-1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jcip-annotations-1.0-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;zookeeper-3.4.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-cli-1.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;avro-1.7.7.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;gson-2.2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;curator-client-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;curator-framework-2.7.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jackson-jaxrs-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;javax.inject-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-lang3-3.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jersey-core-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;apacheds-i18n-2.0.0-M15.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;woodstox-core-5.0.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;api-asn1-api-1.0.0-M20.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-io-2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-lang-2.6.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jackson-mapper-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-digester-1.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jersey-guice-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;commons-net-3.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;metrics-core-3.0.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;apacheds-kerberos-codec-2.0.0-M15.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jettison-1.1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;asm-3.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;lib&#x2F;jersey-server-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-nodemanager-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-common-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-applicationhistoryservice-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-sharedcachemanager-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-api-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-common-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-applications-unmanaged-am-launcher-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-resourcemanager-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-tests-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-timeline-pluginstorage-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-applications-distributedshell-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-router-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-server-web-proxy-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-registry-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;yarn&#x2F;hadoop-yarn-client-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;junit-4.11.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;commons-compress-1.19.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;snappy-java-1.0.5.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;guice-servlet-3.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;netty-3.10.6.Final.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;jackson-core-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;paranamer-2.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;aopalliance-1.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;leveldbjni-all-1.8.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;guice-3.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;log4j-1.2.17.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;protobuf-java-2.5.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;avro-1.7.7.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;javax.inject-1.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;jersey-core-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;commons-io-2.4.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;jackson-mapper-asl-1.9.13.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;hamcrest-core-1.3.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;jersey-guice-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;asm-3.2.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;hadoop-annotations-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;jersey-server-1.9.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-common-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-hs-plugins-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-jobclient-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-jobclient-2.10.0-tests.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-examples-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-shuffle-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-app-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-core-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;hadoop-mapreduce-client-hs-2.10.0.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;contrib&#x2F;capacity-scheduler&#x2F;*.jar:&#x2F;usr&#x2F;local&#x2F;hadoop-2.10.0&#x2F;contrib&#x2F;capacity-scheduler&#x2F;*.jar</span><br><span class="line">STARTUP_MSG:   build &#x3D; ssh:&#x2F;&#x2F;git.corp.linkedin.com:29418&#x2F;hadoop&#x2F;hadoop.git -r e2f1f118e465e787d8567dfa6e2f3b72a0eb9194; compiled by &#39;jhung&#39; on 2019-10-22T19:10Z</span><br><span class="line">STARTUP_MSG:   java &#x3D; 1.8.0_242</span><br><span class="line">************************************************************&#x2F;</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:05 INFO namenode.NameNode: registered UNIX signal handlers for [TERM, HUP, INT]</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:05 INFO namenode.NameNode: createNameNode [-format]</span><br><span class="line">Formatting using clusterid: CID-1a210556-6f1c-4806-95d3-46a85f1c34f7</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSEditLog: Edit logging is async:true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: KeyProvider: null</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: fsLock is fair: true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: Detailed lock hold time metrics enabled: false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: fsOwner             &#x3D; root (auth:SIMPLE)</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: supergroup          &#x3D; supergroup</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: isPermissionEnabled &#x3D; true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: HA Enabled: false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO common.Util: dfs.datanode.fileio.profiling.sampling.percentage set to 0. Disabling file IO profiling</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.DatanodeManager: dfs.block.invalidate.limit: configured&#x3D;1000, counted&#x3D;60, effected&#x3D;1000</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.DatanodeManager: dfs.namenode.datanode.registration.ip-hostname-check&#x3D;true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: dfs.namenode.startup.delay.block.deletion.sec is set to 000:00:00:00.000</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: The block deletion will start around 2020 Mar 07 00:03:06</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: Computing capacity for map BlocksMap</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: VM type       &#x3D; 64-bit</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: 2.0% max memory 889 MB &#x3D; 17.8 MB</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: capacity      &#x3D; 2^21 &#x3D; 2097152 entries</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: dfs.block.access.token.enable&#x3D;false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 WARN conf.Configuration: No unit for dfs.heartbeat.interval(3) assuming SECONDS</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 WARN conf.Configuration: No unit for dfs.namenode.safemode.extension(30000) assuming MILLISECONDS</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManagerSafeMode: dfs.namenode.safemode.threshold-pct &#x3D; 0.9990000128746033</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManagerSafeMode: dfs.namenode.safemode.min.datanodes &#x3D; 0</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManagerSafeMode: dfs.namenode.safemode.extension &#x3D; 30000</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: defaultReplication         &#x3D; 1</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: maxReplication             &#x3D; 512</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: minReplication             &#x3D; 1</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: maxReplicationStreams      &#x3D; 2</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: replicationRecheckInterval &#x3D; 3000</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: encryptDataTransfer        &#x3D; false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO blockmanagement.BlockManager: maxNumBlocksToLog          &#x3D; 1000</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: Append Enabled: true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSDirectory: GLOBAL serial map: bits&#x3D;24 maxEntries&#x3D;16777215</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: Computing capacity for map INodeMap</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: VM type       &#x3D; 64-bit</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: 1.0% max memory 889 MB &#x3D; 8.9 MB</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: capacity      &#x3D; 2^20 &#x3D; 1048576 entries</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSDirectory: ACLs enabled? false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSDirectory: XAttrs enabled? true</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.NameNode: Caching file names occurring more than 10 times</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO snapshot.SnapshotManager: Loaded config captureOpenFiles: falseskipCaptureAccessTimeOnlyChange: false</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: Computing capacity for map cachedBlocks</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: VM type       &#x3D; 64-bit</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: 0.25% max memory 889 MB &#x3D; 2.2 MB</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: capacity      &#x3D; 2^18 &#x3D; 262144 entries</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO metrics.TopMetrics: NNTop conf: dfs.namenode.top.window.num.buckets &#x3D; 10</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO metrics.TopMetrics: NNTop conf: dfs.namenode.top.num.users &#x3D; 10</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO metrics.TopMetrics: NNTop conf: dfs.namenode.top.windows.minutes &#x3D; 1,5,25</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: Retry cache on namenode is enabled</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSNamesystem: Retry cache will use 0.03 of total heap and retry cache entry expiry time is 600000 millis</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: Computing capacity for map NameNodeRetryCache</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: VM type       &#x3D; 64-bit</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: 0.029999999329447746% max memory 889 MB &#x3D; 273.1 KB</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO util.GSet: capacity      &#x3D; 2^15 &#x3D; 32768 entries</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:06 INFO namenode.FSImage: Allocated new BlockPoolId: BP-731773248-172.17.0.2-1583510586951</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO common.Storage: Storage directory &#x2F;tmp&#x2F;hadoop-root&#x2F;dfs&#x2F;name has been successfully formatted.</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO namenode.FSImageFormatProtobuf: Saving image file &#x2F;tmp&#x2F;hadoop-root&#x2F;dfs&#x2F;name&#x2F;current&#x2F;fsimage.ckpt_0000000000000000000 using no compression</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO namenode.FSImageFormatProtobuf: Image file &#x2F;tmp&#x2F;hadoop-root&#x2F;dfs&#x2F;name&#x2F;current&#x2F;fsimage.ckpt_0000000000000000000 of size 323 bytes saved in 0 seconds .</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO namenode.NNStorageRetentionManager: Going to retain 1 images with txid &gt;&#x3D; 0</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO namenode.FSImage: FSImageSaver clean checkpoint: txid &#x3D; 0 when meet shutdown.</span><br><span class="line">20&#x2F;03&#x2F;07 00:03:07 INFO namenode.NameNode: SHUTDOWN_MSG:</span><br><span class="line">&#x2F;************************************************************</span><br><span class="line">SHUTDOWN_MSG: Shutting down NameNode at da3aab8614a2&#x2F;172.17.0.2</span><br><span class="line">************************************************************&#x2F;</span><br></pre></td></tr></table></figure>
+<p>启动hdfs和yarn<br>start-dfs.sh<br>start-yarn.sh<br>验证是否正常启动hdfs：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 新建一个目录</span><br><span class="line">hadoop fs -mkdir &#x2F;test</span><br><span class="line"># 查看是否有对应目录了</span><br><span class="line">[root@da3aab8614a2 hadoop]# hadoop fs -ls &#x2F;</span><br><span class="line"></span><br><span class="line">20&#x2F;03&#x2F;07 00:10:41 WARN fs.FileSystem: &quot;localhost:9000&quot; is a deprecated filesystem name. Use &quot;hdfs:&#x2F;&#x2F;localhost:9000&#x2F;&quot; instead.</span><br><span class="line">Found 1 items</span><br><span class="line">drwxr-xr-x   - root supergroup          0 2020-03-07 00:09 &#x2F;test</span><br></pre></td></tr></table></figure>
+<p>##装hive环境：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">❯ docker cp ~&#x2F;Downloads&#x2F;apache-hive-2.3.6-bin.tar.gz hadoop_centos:&#x2F;usr&#x2F;local</span><br><span class="line">[root@da3aab8614a2 conf]# cp -rf hive-default.xml.template  hive-site.xml</span><br><span class="line">在hive-site.xml中添加如下代码：</span><br><span class="line">  &lt;property&gt;</span><br><span class="line">    &lt;name&gt;system:java.io.tmpdir&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;value&gt;&#x2F;tmp&#x2F;hive&#x2F;java&lt;&#x2F;value&gt;</span><br><span class="line">  &lt;&#x2F;property&gt;</span><br><span class="line">  &lt;property&gt;</span><br><span class="line">    &lt;name&gt;system:user.name&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;value&gt;$&#123;user.name&#125;&lt;&#x2F;value&gt;</span><br><span class="line">  &lt;&#x2F;property&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  配置hive环境变量：</span><br><span class="line">  # 在文本最后加上</span><br><span class="line">export HIVE_HOME&#x3D;&quot;&#x2F;usr&#x2F;local&#x2F;apache-hive-2.3.6-bin&quot;</span><br><span class="line"># 设置PATH变量</span><br><span class="line">export PATH&#x3D;$PATH:$HADOOP_HOME&#x2F;bin:$HADOOP_HOME&#x2F;sbin:$HIVE_HOME&#x2F;bin</span><br><span class="line"></span><br><span class="line">初始化：</span><br><span class="line">schematool -initSchema -dbType derby</span><br><span class="line">输出如下，则代表成功：</span><br></pre></td></tr></table></figure>
+<p>SLF4J: Class path contains multiple SLF4J bindings.<br>SLF4J: Found binding in [jar:file:/usr/local/apache-hive-2.3.6-bin/lib/log4j-slf4j-impl-2.6.2.jar!/org/slf4j/impl/StaticLoggerBinder.class]<br>SLF4J: Found binding in [jar:file:/usr/local/hadoop-2.10.0/share/hadoop/common/lib/slf4j-log4j12-1.7.25.jar!/org/slf4j/impl/StaticLoggerBinder.class]<br>SLF4J: See <a href="http://www.slf4j.org/codes.html#multiple_bindings" target="_blank" rel="noopener">http://www.slf4j.org/codes.html#multiple_bindings</a> for an explanation.<br>SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]<br>Metastore connection URL:     jdbc:derby:;databaseName=metastore_db;create=true<br>Metastore Connection Driver :     org.apache.derby.jdbc.EmbeddedDriver<br>Metastore connection User:     APP<br>Starting metastore schema initialization to 2.3.0<br>Initialization script hive-schema-2.3.0.derby.sql<br>Initialization script completed<br>schemaTool completed</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">启动hive metastore；</span><br><span class="line">否则会报错：</span><br><span class="line">hive --service metastore&amp;</span><br></pre></td></tr></table></figure>
+<p>hive&gt; create database hive;<br>FAILED: SemanticException org.apache.hadoop.hive.ql.metadata.HiveException: java.lang.RuntimeException: Unable to instantiate org.apache.hadoop.hive.ql.metadata.SessionHiveMetaStoreClient<br>hive&gt; exit;</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">验证hive</span><br><span class="line">我们先创建一个数据文件放到&#x2F;usr&#x2F;local下,</span><br><span class="line"></span><br><span class="line">cd &#x2F;usr&#x2F;local</span><br><span class="line"></span><br><span class="line">vim test.txt</span><br></pre></td></tr></table></figure>
+<p>1,jack<br>2,hel<br>3,nack</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">输入hive，进入交互命令行</span><br></pre></td></tr></table></figure>
+<h1 id="建表"><a href="#建表" class="headerlink" title="建表"></a>建表</h1><p>create table test(<br>    id      int<br>   ,name    string<br>)<br>row format delimited<br>fields terminated by ‘,’;</p>
+<h1 id="导入数据"><a href="#导入数据" class="headerlink" title="导入数据"></a>导入数据</h1><p>load data local inpath ‘/usr/local/test.txt’ into table test;</p>
+<h1 id="查询刚才导入的数据"><a href="#查询刚才导入的数据" class="headerlink" title="查询刚才导入的数据"></a>查询刚才导入的数据</h1><p>select * from test;</p>
+<h1 id="查询结果"><a href="#查询结果" class="headerlink" title="查询结果:"></a>查询结果:</h1><p>OK<br>1       jack<br>2       hel<br>3       nack</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">执行记录如下：</span><br></pre></td></tr></table></figure>
+<p>Time taken: 1.805 seconds, Fetched: 1 row(s)<br>hive&gt; create table test(<br>    &gt;     id      int<br>    &gt;    ,name    string<br>    &gt; )<br>    &gt; row format delimited<br>    &gt; fields terminated by ‘,’;<br>OK<br>Time taken: 2.487 seconds<br>hive&gt; load data local inpath ‘/usr/local/test.txt’ into table test;<br>Loading data to table default.test<br>OK<br>Time taken: 9.316 seconds<br>hive&gt;<br>    &gt; select * from test;<br>OK<br>1    jack<br>2    hel<br>3    nack<br>Time taken: 4.237 seconds, Fetched: 3 row(s)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">启动hiveserver2</span><br><span class="line">1. 修改hadoop的一些权限配置</span><br><span class="line">启动hiveserver2之前，必须进行如下配置：需要先往hdfs的core-site.xml加入以下配置:</span><br></pre></td></tr></table></figure>
+<p>vim /usr/local/hadoop-2.7.0/etc/hadoop/core-site.xml</p>
+<property>
+    <name>hadoop.proxyuser.root.hosts</name>
+    <value>*</value>
+</property>
+<property>
+    <name>hadoop.proxyuser.root.groups</name>
+    <value>*</value>
+</property>
+```
+
+<p>nohup hiveserver2 &amp;</p>
+<p>给运行的容器暴露端口：<br>方法二</p>
+<p>宿主机（host）上修改iptables 规则，开放容器的响应端口；参考网上的命令</p>
+<p>iptables -t nat -A DOCKER -p tcp -dport 8080 -j DNAT –to-destination 172.17.0.2:8080</p>
+<p>当我们创建nginx镜像时，并且启动nginx时，我们只能在容器内部区访问nginx的网址。所以为了容器之外能访问，需要暴露端口，也就需要了将容器内部的端口映射出去。</p>
+<p>docker容器暴露端口的形式有四种：</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2020/03/06/docker%E5%88%9B%E5%BB%BAhadoop%E7%8E%AF%E5%A2%83%E8%AE%B0%E5%BD%95/" data-id="ck7h3kh2c0003890bd6b1bv6b" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/docker-bigdata/" rel="tag">docker bigdata</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-docker-registory 开启" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/03/05/docker-registory%20%E5%BC%80%E5%90%AF/" class="article-date">
+  <time datetime="2020-03-05T09:56:25.000Z" itemprop="datePublished">2020-03-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/03/05/docker-registory%20%E5%BC%80%E5%90%AF/">zeppeline </a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Docker Registry<br>Docker Registry 2.0搭建</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -d -p 5000:5000 --restart&#x3D;always --name registry2 registry:2</span><br></pre></td></tr></table></figure>
+
+<p>如果遇到镜像下载不下来的情况，需要修改 /etc/docker/daemon.json 文件并添加上 registry-mirrors 键值，然后重启docker服务：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">  </span><br><span class="line">&quot;registry-mirrors&quot;</span><br><span class="line">:</span><br><span class="line"> </span><br><span class="line">[</span><br><span class="line">&quot;https:&#x2F;&#x2F;registry.docker-cn.com&quot;</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Docker开启远程API<br>用vim编辑器修改docker.service文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim &#x2F;lib&#x2F;systemd&#x2F;system&#x2F;docker.service</span><br></pre></td></tr></table></figure>
+
+<p>需要修改的部分：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecStart&#x3D;&#x2F;usr&#x2F;bin&#x2F;dockerd -H tcp:&#x2F;&#x2F;0.0.0.0:2375 -H unix:&#x2F;&#x2F;&#x2F;var&#x2F;run&#x2F;docker.sock</span><br></pre></td></tr></table></figure>
+
+
+<p>让Docker支持http上传镜像</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &#39;&#123; &quot;insecure-registries&quot;:[&quot;127.0.0.1:5000&quot;] &#125;&#39;&gt;&#x2F;etc&#x2F;docker&#x2F;daemon.json</span><br></pre></td></tr></table></figure>
+
+<p>重新启动Docker服务<br>systemctl stop docker</p>
+<p>systemctl start docker</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2020/03/05/docker-registory%20%E5%BC%80%E5%90%AF/" data-id="ck7h3kh1z0000890b0i0c0gtu" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-zeppeline" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/03/05/zeppeline/" class="article-date">
+  <time datetime="2020-03-05T02:56:25.000Z" itemprop="datePublished">2020-03-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/03/05/zeppeline/">zeppeline </a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>##zeppeline</p>
+<ol>
+<li>cnpm install -g</li>
+<li>bower –-alow-root install</li>
+<li>grunt –-force<br>若报错，需要先删掉zeppelin-web目录下的node_modules目录，再使用zeppelin编译命令编译<br>mvn clean package -DskipTests -Pspark-2.1 -Phadoop-2.7 -Pyarn -Ppyspark -Psparkr -Pr -Pscala-2.11</li>
+</ol>
+<p>❯ bin/hive –service metastore &amp;</p>
+<p>~/dev/install/apache-hive-1.2.2-bin<br>❯ Starting Hive Metastore Server<br>bin/hive –service hiveserver2 &amp;</p>
+<p>DROP TABLE IF EXISTS source_kafka;</p>
+<p>CREATE TABLE source_kafka (<br>    status  STRING,<br>    direction STRING,<br>    event_ts BIGINT<br>) WITH (<br>  ‘connector.type’ = ‘kafka’,<br>  ‘connector.version’ = ‘universal’,<br>  ‘connector.topic’ = ‘generated.events’,<br>  ‘connector.startup-mode’ = ‘earliest-offset’,<br>  ‘connector.properties.zookeeper.connect’ = ‘localhost:2181/kafka’,<br>  ‘connector.properties.bootstrap.servers’ = ‘localhost:9092’,<br>  ‘connector.properties.group.id’ = ‘testGroup’,<br>  ‘connector.startup-mode’ = ‘earliest-offset’,<br>  ‘format.type’=’json’,<br>  ‘update-mode’ = ‘append’<br>);<br>DROP TABLE IF EXISTS sink_kafka;</p>
+<p>CREATE TABLE sink_kafka (<br>    status  STRING,<br>    direction STRING,<br>    event_ts TIMESTAMP(3),<br>    WATERMARK FOR event_ts AS event_ts - INTERVAL ‘5’ SECOND<br>) WITH (<br>  ‘connector.type’ = ‘kafka’,<br>  ‘connector.version’ = ‘universal’,<br>  ‘connector.topic’ = ‘generated.events2’,<br>  ‘connector.properties.zookeeper.connect’ = ‘localhost:2181’,<br>  ‘connector.properties.bootstrap.servers’ = ‘localhost:9092’,<br>  ‘connector.properties.group.id’ = ‘testGroup’,<br>  ‘format.type’=’json’,<br>  ‘update-mode’ = ‘append’<br>);<br>insert into sink_kafka select status, direction, cast(event_ts/1000000000 as timestamp(3)) from source_kafka where status &lt;&gt; ‘foo’;</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2020/03/05/zeppeline/" data-id="ck7e9skhw0001nw0bgblafzqv" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-hello-world" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/03/05/hello-world/" class="article-date">
+  <time datetime="2020-03-05T02:30:48.517Z" itemprop="datePublished">2020-03-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2020/03/05/hello-world/">Hello World</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2020/03/05/hello-world/" data-id="ck7e9skhr0000nw0bccv2gz4v" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/docker-bigdata/" rel="tag">docker bigdata</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/docker-bigdata/" style="font-size: 10px;">docker bigdata</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">March 2020</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/03/07/%E8%BF%90%E8%A1%8C%E4%B8%AD%E5%AE%B9%E5%99%A8%E5%A2%9E%E5%8A%A0%E7%AB%AF%E5%8F%A3/">运行中容器增加端口</a>
+          </li>
+        
+          <li>
+            <a href="/2020/03/06/docker%E5%88%9B%E5%BB%BAhadoop%E7%8E%AF%E5%A2%83%E8%AE%B0%E5%BD%95/">docker创建hadoop环境记录</a>
+          </li>
+        
+          <li>
+            <a href="/2020/03/05/docker-registory%20%E5%BC%80%E5%90%AF/">zeppeline </a>
+          </li>
+        
+          <li>
+            <a href="/2020/03/05/zeppeline/">zeppeline </a>
+          </li>
+        
+          <li>
+            <a href="/2020/03/05/hello-world/">Hello World</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 huang Xiaofeng<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+      <span id="busuanzi_container_site_uv">
+        本站访客数<span id="busuanzi_value_site_uv"></span>人次
+      </span>
+    </div>
+  </div>
+  
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js">
+</script>
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
